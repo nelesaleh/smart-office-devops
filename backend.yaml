@@ -11,48 +11,35 @@ spec:
     metadata:
       labels:
         app: smart-office-backend
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "5000"
-        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: smart-office-backend
         image: nelerayan/smart-office-backend:latest
-        imagePullPolicy: Always 
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
         env:
         - name: MONGO_URI
-          valueFrom:
-            secretKeyRef:
-              name: smart-office-secret
-              key: mongo-uri
-        - name: FLASK_ENV
-          valueFrom:
-            configMapKeyRef:
-              name: smart-office-config
-              key: FLASK_ENV
+          value: "mongodb://mongodb-service:27017/smart_office"
+        
         livenessProbe:
           httpGet:
             path: /health
             port: 5000
-          initialDelaySeconds: 15
+          initialDelaySeconds: 120   # <--- زدناها إلى دقيقتين
           periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 10
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: smart-office-service
-  # 👇👇👇 هذه التسميات مهمة لبروميثيوس، اتركها كما هي
-  labels:
-    app: smart-office-backend
 spec:
   type: LoadBalancer
   selector:
     app: smart-office-backend
   ports:
     - protocol: TCP
-      port: 80           # 👈 التغيير هنا: استخدم المنفذ 80 المسموح به عالمياً
-      targetPort: 5000   # 👈 هذا منفذ تطبيقك الداخلي (لا تغيره)
-      name: web
+      port: 80
+      targetPort: 5000
